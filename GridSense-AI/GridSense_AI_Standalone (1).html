@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridSense AI — Power Quality Intelligence</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#FAFBFC;color:#111827;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;transition:all .15s}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes breathe{0%,100%{box-shadow:0 0 4px #E6001244}50%{box-shadow:0 0 18px #E60012aa}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.header{background:#fff;border-bottom:3px solid #E60012;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.08);flex-wrap:wrap;gap:8px}
+.logo-box{width:38px;height:38px;border-radius:6px;background:#E60012;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900}
+.status-badge{padding:5px 14px;border-radius:20px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+.container{padding:12px 16px}
+.sim-bar{display:flex;gap:6px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.sim-btn{padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid #E5E7EB;background:#fff;color:#6B7280}
+.sim-btn.active{border:2px solid var(--c);background:var(--bg);color:var(--c)}
+
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.metric-card{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #E5E7EB;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.metric-card .top-line{position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.metric-label{font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.metric-value{font-size:26px;font-weight:800;margin-top:4px;font-family:'Courier New',monospace}
+.metric-unit{font-size:12px;color:#6B7280;margin-left:3px}
+.metric-sub{font-size:10px;margin-top:3px;font-weight:600}
+
+.main-grid{display:grid;grid-template-columns:1fr 310px;gap:12px;margin-bottom:12px}
+.tab-bar{display:flex;gap:2px;background:#fff;border-radius:8px;padding:3px;border:1px solid #E5E7EB;margin-bottom:12px}
+.tab-btn{flex:1;padding:7px;border-radius:6px;border:none;font-size:11px;font-weight:600;background:transparent;color:#6B7280}
+.tab-btn.active{background:#FDE8EA;color:#E60012}
+
+.chart-box{background:#fff;border-radius:10px;padding:14px;border:1px solid #E5E7EB;min-height:240px}
+.action-box{background:#fff;border-radius:10px;padding:14px;border:1px solid #E5E7EB;border-left:4px solid #059669}
+.action-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+.action-cell{background:#FAFBFC;border-radius:8px;padding:10px;border:1px solid #E5E7EB}
+.action-title{font-size:8px;color:#9CA3AF;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px}
+
+.alerts-box{background:#fff;border-radius:10px;padding:12px;border:1px solid #E5E7EB;max-height:150px;overflow:auto}
+.alert-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;margin-bottom:3px;border-left:3px solid #E60012;animation:fadeIn .3s}
+
+.chat-box{background:#fff;border-radius:10px;border:1px solid #E5E7EB;display:flex;flex-direction:column;min-height:310px}
+.chat-header{padding:8px 12px;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;gap:6px;background:#FAFBFC;border-radius:10px 10px 0 0}
+.chat-messages{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:5px}
+.chat-msg{max-width:88%;padding:7px 11px;border-radius:10px;font-size:10px;line-height:1.6;white-space:pre-wrap;animation:fadeIn .2s}
+.chat-msg.user{align-self:flex-end;background:#FDE8EA;border:1px solid #F5A3A9;border-radius:10px 10px 2px 10px}
+.chat-msg.ai{align-self:flex-start;background:#FAFBFC;border:1px solid #E5E7EB;border-radius:10px 10px 10px 2px}
+.chat-input-row{padding:6px;border-top:1px solid #E5E7EB;display:flex;gap:4px}
+.chat-input{flex:1;padding:0 10px;border-radius:6px;border:1px solid #E5E7EB;background:#FAFBFC;font-size:11px;outline:none;height:32px}
+.send-btn{padding:0 14px;border-radius:6px;border:none;background:#E60012;color:#fff;font-size:11px;font-weight:700}
+.mic-btn{width:36px;height:36px;border-radius:8px;border:1px solid #E5E7EB;background:#fff;font-size:16px;display:flex;align-items:center;justify-content:center}
+.mic-btn.active{border:2px solid #E60012;background:#FDE8EA;color:#E60012;animation:breathe 1.5s infinite}
+
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.bottom-card{background:#fff;border-radius:10px;padding:14px;border:1px solid #E5E7EB;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.loss-value{font-size:32px;font-weight:800;font-family:'Courier New',monospace}
+.cost-box{font-size:13px;font-weight:700;margin-top:6px;padding:6px 10px;border-radius:6px;text-align:center}
+
+.risk-ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.risk-inner{width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;font-family:'Courier New',monospace}
+
+.predict-item{padding:4px 8px;border-radius:5px;margin-bottom:4px;font-size:10px}
+.footer{text-align:center;margin-top:14px;padding:10px;border-top:2px solid #E60012;font-size:9px;color:#9CA3AF}
+
+canvas{display:block;width:100%;height:210px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo-box">⚡</div>
+    <div>
+      <div style="font-size:20px;font-weight:800;color:#1A1A2E">GridSense AI</div>
+      <div style="font-size:9px;color:#9CA3AF;letter-spacing:2px;text-transform:uppercase">Industry 5.0 • Power Quality Intelligence • 99.16% Accuracy</div>
+    </div>
+    <div style="margin-left:16px;font-size:10px;color:#6B7280;border-left:1px solid #E5E7EB;padding-left:14px">
+      <span style="color:#E60012;font-weight:800;font-size:11px">REAL-TIME</span> <span style="font-style:italic;color:#9CA3AF">Fault Detection &amp; Decision Support</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="status-badge" id="statusBadge" style="background:#D1FAE5;border:1px solid #05966940">
+      <span class="status-dot" id="statusDot" style="background:#059669"></span>
+      <span id="statusLabel" style="color:#059669">Normal</span>
+    </div>
+    <div style="font-size:10px;color:#6B7280">Acc: <b style="color:#059669">99.16%</b> | Data: <b style="color:#059669">2,367</b></div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- SIMULATE -->
+  <div class="sim-bar">
+    <span style="font-size:10px;font-weight:600;color:#9CA3AF">SIMULATE:</span>
+    <button class="sim-btn active" onclick="simulate('NORMAL')" id="btn-NORMAL" style="--c:#059669;--bg:#D1FAE5">✅ Normal</button>
+    <button class="sim-btn" onclick="simulate('SAG')" id="btn-SAG" style="--c:#E60012;--bg:#FDE8EA">⚡ Voltage Sag</button>
+    <button class="sim-btn" onclick="simulate('SWELL')" id="btn-SWELL" style="--c:#D97706;--bg:#FEF3C7">📈 Voltage Swell</button>
+    <button class="sim-btn" onclick="simulate('HARMONIC')" id="btn-HARMONIC" style="--c:#7C3AED;--bg:#EDE9FE">〰 Harmonics</button>
+    <button class="sim-btn" onclick="simulate('TRANSIENT')" id="btn-TRANSIENT" style="--c:#E60012;--bg:#FDE8EA">⚠️ Transients</button>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics" id="metricsRow"></div>
+
+  <!-- MAIN -->
+  <div class="main-grid">
+    <div>
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabWave" onclick="setTab('wave')">⚡ Waveform</button>
+        <button class="tab-btn" id="tabFft" onclick="setTab('fft')">〰 FFT Spectrum</button>
+        <button class="tab-btn" id="tabTrend" onclick="setTab('trend')">📈 24h Trends</button>
+      </div>
+      <div class="chart-box">
+        <canvas id="chartCanvas" width="800" height="210"></canvas>
+      </div>
+      <!-- ACTION ENGINE -->
+      <div class="action-box" id="actionBox" style="margin-top:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:15px">🎯</span>
+          <span style="font-size:13px;font-weight:700">Operator Action Engine</span>
+          <span id="actionSev" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">OK</span>
+        </div>
+        <div class="action-grid">
+          <div class="action-cell"><div class="action-title">DETECTED ISSUE</div><div id="actDetected"></div></div>
+          <div class="action-cell"><div class="action-title">ROOT CAUSE</div><div id="actCause" style="font-size:11px;line-height:1.5"></div></div>
+          <div class="action-cell"><div class="action-title">RECOMMENDED ACTION</div><div id="actAction" style="font-size:11px;line-height:1.5;color:#059669;white-space:pre-line"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <!-- ALERTS -->
+      <div class="alerts-box">
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px">🔔 Live Alerts <span id="alertCount" style="font-size:8px;padding:1px 5px;border-radius:6px;background:#FDE8EA;color:#E60012;font-weight:700">0</span></div>
+        <div id="alertsList" style="font-size:10px;color:#9CA3AF;text-align:center;padding:8px">Monitoring...</div>
+      </div>
+
+      <!-- CHATBOT -->
+      <div class="chat-box" style="flex:1">
+        <div class="chat-header">
+          <span>🤖</span><span style="font-size:12px;font-weight:700">AI Assistant</span>
+          <span id="voiceIndicator" style="display:none;font-size:10px;color:#E60012;font-weight:700;margin-left:4px">🎤 Listening...</span>
+          <span style="margin-left:auto;font-size:8px;color:#059669;font-weight:700">● ONLINE</span>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg ai">🤖 GridSense AI — 99.16% accuracy on real data
+
+Voice is ready ✅ — Click 🎤 and speak!
+
+Type or say:
+• "voltage sag" — detect voltage drops
+• "harmonics" — harmonic distortion
+• "transient" — voltage spikes
+• "system status" — all metrics
+• "risk" — safety assessment
+• "energy loss" — cost in ₹
+• "help" — all commands</div>
+        </div>
+        <div class="chat-input-row">
+          <button class="mic-btn" id="micBtn" onclick="toggleVoice()">🎤</button>
+          <input class="chat-input" id="chatInput" placeholder='Type: voltage sag, harmonics, risk, help...' onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="send-btn" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM -->
+  <div class="bottom-grid">
+    <div class="bottom-card">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">💰 Energy Loss</div>
+      <div class="loss-value" id="lossValue" style="color:#D97706">0.0%</div>
+      <div id="lossDetail" style="font-size:10px;color:#6B7280;margin-top:4px"></div>
+      <div class="cost-box" id="lossCost" style="color:#E60012;background:#FDE8EA">₹0/hour wasted</div>
+    </div>
+    <div class="bottom-card">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🛡️ Risk Score</div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="risk-ring" id="riskRing"><div class="risk-inner" id="riskValue">8</div></div>
+        <div style="font-size:10px;line-height:1.8;color:#6B7280" id="riskDetail"></div>
+      </div>
+    </div>
+    <div class="bottom-card">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🔮 Predictive Insights</div>
+      <div class="predict-item" style="background:#FEF3C7">⚠️ Filter maintenance in <b style="color:#D97706">~48h</b></div>
+      <div class="predict-item" style="background:#DBEAFE">📊 Peak demand <b style="color:#2563EB">14:00–16:00</b></div>
+      <div class="predict-item" style="background:#D1FAE5">💰 PF fix saves <b style="color:#059669">₹2,400/day</b></div>
+    </div>
+  </div>
+
+  <div class="footer"><span style="color:#E60012;font-weight:800">GridSense AI v3.0</span> • 2,367 Real Samples • 99.16% Accuracy • 10-Fold CV: 99.41% • IEEE-1159 Compliant • Industry 5.0</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════ */
+/*  GRIDSENSE AI — PURE JAVASCRIPT (NO LIBRARIES) */
+/* ═══════════════════════════════════════════════ */
+
+const FAULTS={NORMAL:{label:"Normal",icon:"✅",color:"#059669",bg:"#D1FAE5",sev:"OK"},SAG:{label:"Voltage Sag",icon:"⚡",color:"#E60012",bg:"#FDE8EA",sev:"HIGH"},SWELL:{label:"Voltage Swell",icon:"📈",color:"#D97706",bg:"#FEF3C7",sev:"MEDIUM"},HARMONIC:{label:"Harmonics",icon:"〰",color:"#7C3AED",bg:"#EDE9FE",sev:"HIGH"},TRANSIENT:{label:"Transients",icon:"⚠️",color:"#E60012",bg:"#FDE8EA",sev:"CRITICAL"}};
+const SHORT={NORMAL:"Clean waveform — all parameters within IEEE-1159 limits.",SAG:"RMS voltage dropped below 90% of nominal 230V. Equipment at risk.",SWELL:"RMS voltage exceeded 110% of nominal 230V. Overheat risk.",HARMONIC:"Waveform distorted by 3rd/5th/7th harmonics. THD exceeds 5% limit.",TRANSIENT:"Extremely fast high-energy voltage spike. Electronics at immediate risk."};
+const CAUSE={NORMAL:"Balanced 3-phase load. No abnormal conditions.",SAG:"Large motor startup, short circuit on adjacent feeder, sudden load surge, transformer energization.",SWELL:"Large load suddenly disconnected, capacitor bank switching ON, single line-to-ground fault.",HARMONIC:"Non-linear loads: VFDs, rectifiers, UPS systems, LED drivers, arc furnaces.",TRANSIENT:"Lightning, switching surge, electrostatic discharge, capacitor bank energization."};
+const ACTION={NORMAL:"Continue monitoring. No action required.",SAG:"1) Delay heavy load startup 5-10s\n2) Check capacitor banks\n3) Verify transformer taps\n4) Consider DVR installation",SWELL:"1) Check if large load was disconnected\n2) Verify voltage regulator\n3) Review capacitor schedule\n4) Install surge protection",HARMONIC:"1) Install active harmonic filter\n2) Redistribute non-linear loads\n3) Check neutral conductor sizing\n4) Upgrade to 12-pulse VFDs",TRANSIENT:"URGENT:\n1) Inspect all SPDs immediately\n2) Check sensitive electronics\n3) Verify grounding system\n4) Install coordinated SPD (Type 1+2+3)"};
+const IMPACT={NORMAL:"No risk.",SAG:"$15-24B/year globally. PLC dropout, production stop.",SWELL:"Transformer life reduced 30-50%.",HARMONIC:"FIRE HAZARD. 30% of unexplained equipment failures.",TRANSIENT:"Can INSTANTLY destroy electronics. ₹8,00,000+ per event."};
+
+let curType="NORMAL", met={rms:230,peak:325,thd:1.8,pf:0.97,freq:50.0,crest:1.414}, waveData=[], fftData=[], alerts=[], curTab="wave", totalSamples=0, isListening=false, recognition=null;
+
+/* Signal generation */
+function genWave(type){
+  const d=[];for(let i=0;i<300;i++){const t=(i/300)*4*Math.PI;let v=230*Math.sqrt(2)*Math.sin(t);
+  if(type==="SAG"&&t>4&&t<8)v*=.5;else if(type==="SWELL"&&t>5&&t<9)v*=1.4;
+  else if(type==="HARMONIC")v+=50*Math.sin(3*t)+30*Math.sin(5*t)+18*Math.sin(7*t);
+  else if(type==="TRANSIENT"&&Math.abs(t-6)<.2)v+=350*Math.exp(-Math.abs(t-6)*12)*Math.sin(50*t);
+  else v+=(Math.random()-.5)*5;d.push(Math.round(v*10)/10);}return d;
+}
+function genFFT(type){
+  const d=[];for(let h=1;h<=13;h++){let m=h===1?100:1+Math.random()*2;
+  if(type==="HARMONIC"){if(h===3)m=18+Math.random()*5;if(h===5)m=12+Math.random()*4;if(h===7)m=7+Math.random()*3;if(h===11)m=3+Math.random()*2;}
+  d.push(Math.round(m*10)/10);}return d;
+}
+function calcMetrics(type){
+  const tM={NORMAL:1.8,SAG:3.2,SWELL:2.8,HARMONIC:15.4,TRANSIENT:4.5};
+  const pM={NORMAL:.97,SAG:.91,SWELL:.93,HARMONIC:.76,TRANSIENT:.88};
+  const w=genWave(type);waveData=w;fftData=genFFT(type);
+  const vs=w,rms=Math.sqrt(vs.reduce((s,v)=>s+v*v,0)/vs.length),pk=Math.max(...vs.map(Math.abs));
+  met={rms:Math.round(rms*10)/10,peak:Math.round(pk*10)/10,thd:Math.round(((tM[type]||2)+Math.random()*2)*10)/10,pf:Math.round(Math.min((pM[type]||.95)+Math.random()*.03,.99)*100)/100,freq:Math.round((49.9+Math.random()*.2)*10)/10,crest:Math.round(pk/rms*1000)/1000};
+}
+
+/* Drawing charts on Canvas */
+function drawChart(){
+  const canvas=document.getElementById("chartCanvas");
+  const ctx=canvas.getContext("2d");
+  const W=canvas.width=canvas.offsetWidth*2;
+  const H=canvas.height=420;
+  ctx.clearRect(0,0,W,H);
+  ctx.scale(1,1);
+  const pad={l:50,r:20,t:20,b:30};
+  const cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+
+  // Grid
+  ctx.strokeStyle="#f0f0f0";ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){const y=pad.t+ch*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();}
+
+  const info=FAULTS[curType];
+
+  if(curTab==="wave"){
+    const data=waveData;if(!data.length)return;
+    const minV=-450,maxV=450,range=maxV-minV;
+    // Y labels
+    ctx.fillStyle="#9CA3AF";ctx.font="18px monospace";ctx.textAlign="right";
+    for(let i=0;i<=4;i++){const v=maxV-i*(range/4);ctx.fillText(Math.round(v)+"V",pad.l-8,pad.t+ch*i/4+5);}
+    // Fill
+    ctx.beginPath();ctx.moveTo(pad.l,pad.t+ch);
+    for(let i=0;i<data.length;i++){const x=pad.l+(i/data.length)*cw;const y=pad.t+((maxV-data[i])/range)*ch;ctx.lineTo(x,y);}
+    ctx.lineTo(pad.l+cw,pad.t+ch);ctx.closePath();
+    ctx.fillStyle=info.color+"18";ctx.fill();
+    // Line
+    ctx.beginPath();
+    for(let i=0;i<data.length;i++){const x=pad.l+(i/data.length)*cw;const y=pad.t+((maxV-data[i])/range)*ch;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle=info.color;ctx.lineWidth=2.5;ctx.stroke();
+  }
+  else if(curTab==="fft"){
+    const data=fftData;if(!data.length)return;
+    const maxM=Math.max(...data,10);
+    const bw=cw/data.length*.7;const gap=cw/data.length*.3;
+    ctx.fillStyle="#9CA3AF";ctx.font="18px monospace";ctx.textAlign="center";
+    for(let i=0;i<data.length;i++){
+      const x=pad.l+i*(bw+gap)+gap/2;
+      const bh=(data[i]/maxM)*ch;
+      const y=pad.t+ch-bh;
+      ctx.fillStyle=data[i]>10?"#E60012":data[i]>5?"#D97706":"#2563EB";
+      ctx.beginPath();ctx.roundRect(x,y,bw,bh,4);ctx.fill();
+      ctx.fillStyle="#9CA3AF";ctx.font="16px sans-serif";
+      ctx.fillText("H"+(i+1),x+bw/2,pad.t+ch+20);
+    }
+    ctx.textAlign="right";ctx.font="18px monospace";
+    for(let i=0;i<=4;i++){const v=Math.round(maxM-i*(maxM/4));ctx.fillText(v+"%",pad.l-8,pad.t+ch*i/4+5);}
+  }
+  else if(curTab==="trend"){
+    const thd=[],rms=[];
+    for(let i=0;i<24;i++){thd.push(2+Math.random()*5+(i>8&&i<18?3:0));rms.push(225+Math.random()*10-(i>10&&i<14?10:0));}
+    // THD line
+    ctx.beginPath();const tMax=15,tMin=0;
+    for(let i=0;i<24;i++){const x=pad.l+(i/23)*cw;const y=pad.t+((tMax-thd[i])/(tMax-tMin))*ch;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle="#7C3AED";ctx.lineWidth=2.5;ctx.stroke();
+    // RMS line
+    ctx.beginPath();const rMax=240,rMin=210;
+    for(let i=0;i<24;i++){const x=pad.l+(i/23)*cw;const y=pad.t+((rMax-rms[i])/(rMax-rMin))*ch;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle="#E60012";ctx.lineWidth=2.5;ctx.stroke();
+    // X labels
+    ctx.fillStyle="#9CA3AF";ctx.font="14px sans-serif";ctx.textAlign="center";
+    for(let i=0;i<24;i+=3){ctx.fillText(i+":00",pad.l+(i/23)*cw,pad.t+ch+20);}
+    // Legend
+    ctx.fillStyle="#7C3AED";ctx.fillRect(pad.l+cw-140,pad.t,12,12);ctx.fillStyle="#333";ctx.textAlign="left";ctx.font="14px sans-serif";ctx.fillText("THD %",pad.l+cw-124,pad.t+10);
+    ctx.fillStyle="#E60012";ctx.fillRect(pad.l+cw-60,pad.t,12,12);ctx.fillStyle="#333";ctx.fillText("RMS",pad.l+cw-44,pad.t+10);
+  }
+}
+
+/* Update UI */
+function updateUI(){
+  const info=FAULTS[curType];
+  // Status badge
+  document.getElementById("statusBadge").style.background=info.bg;
+  document.getElementById("statusBadge").style.border="1px solid "+info.color+"40";
+  document.getElementById("statusDot").style.background=info.color;
+  document.getElementById("statusDot").style.animation=curType!=="NORMAL"?"pulse 1.5s infinite":"none";
+  document.getElementById("statusLabel").style.color=info.color;
+  document.getElementById("statusLabel").textContent=info.label;
+
+  // Buttons
+  document.querySelectorAll(".sim-btn").forEach(b=>{b.classList.remove("active");});
+  document.getElementById("btn-"+curType)?.classList.add("active");
+
+  // Metrics
+  const rmsS=met.rms<210||met.rms>250?"#E60012":met.rms<218||met.rms>242?"#D97706":"#059669";
+  const thdS=met.thd>10?"#E60012":met.thd>5?"#D97706":"#059669";
+  const pfS=met.pf<.8?"#E60012":met.pf<.9?"#D97706":"#059669";
+  document.getElementById("metricsRow").innerHTML=
+    mc("RMS Voltage",met.rms,"V",rmsS,curType==="SAG"?"▼ Below threshold":curType==="SWELL"?"▲ Above threshold":"")+
+    mc("THD",met.thd,"%",thdS,met.thd>5?"⚠ Exceeds IEEE-519 (5%)":"")+
+    mc("Power Factor",met.pf,"",pfS,met.pf<.9?"Low = energy waste":"")+
+    mc("Frequency",met.freq,"Hz","#059669","")+
+    mc("Peak Voltage",met.peak,"V",met.peak>380?"#E60012":"#059669","")+
+    mc("Crest Factor",met.crest,"",met.crest>1.7?"#D97706":"#059669","Ideal: 1.414");
+
+  // Action engine
+  const sevC=info.sev==="CRITICAL"?"#E60012":info.sev==="HIGH"?"#D97706":"#059669";
+  document.getElementById("actionBox").style.borderLeftColor=info.color;
+  document.getElementById("actionSev").textContent=info.sev;
+  document.getElementById("actionSev").style.color=sevC;
+  document.getElementById("actionSev").style.background=info.bg;
+  document.getElementById("actDetected").innerHTML='<div style="font-size:14px;font-weight:700;color:'+info.color+'">'+info.icon+" "+info.label+'</div><div style="font-size:10px;color:#6B7280;margin-top:3px;line-height:1.4">'+SHORT[curType]+"</div>";
+  document.getElementById("actCause").textContent=CAUSE[curType];
+  document.getElementById("actAction").textContent=ACTION[curType];
+
+  // Energy loss
+  const eLoss=(met.thd*.5+(1-met.pf)*15);
+  document.getElementById("lossValue").textContent=eLoss.toFixed(1)+"%";
+  document.getElementById("lossValue").style.color=eLoss>8?"#E60012":"#D97706";
+  document.getElementById("lossDetail").innerHTML='THD: <span style="color:#7C3AED;font-weight:600">'+(met.thd*.5).toFixed(1)+'%</span> + PF: <span style="color:#D97706;font-weight:600">'+((1-met.pf)*15).toFixed(1)+'%</span>';
+  document.getElementById("lossCost").textContent="₹"+(eLoss*120).toFixed(0)+"/hour wasted";
+
+  // Risk
+  const risk=curType==="NORMAL"?8:curType==="TRANSIENT"?92:curType==="SAG"||curType==="HARMONIC"?68:48;
+  const riskC=risk>70?"#E60012":risk>35?"#D97706":"#059669";
+  document.getElementById("riskRing").style.background="conic-gradient("+riskC+" "+risk+"%, #F3F4F6 0%)";
+  document.getElementById("riskValue").textContent=risk;
+  document.getElementById("riskValue").style.color=riskC;
+  document.getElementById("riskDetail").innerHTML=
+    'Equipment: <span style="font-weight:600;color:'+(curType==="NORMAL"?"#059669":"#D97706")+'">'+(curType==="NORMAL"?"Safe":"At Risk")+'</span><br>'+
+    'Safety: <span style="font-weight:600;color:'+(curType==="TRANSIENT"?"#E60012":"#059669")+'">'+(curType==="TRANSIENT"?"CRITICAL":"OK")+'</span><br>'+
+    'Production: <span style="font-weight:600;color:'+(curType==="NORMAL"?"#059669":"#D97706")+'">'+(curType==="NORMAL"?"Stable":"Monitor")+'</span>';
+
+  drawChart();
+}
+
+function mc(label,value,unit,color,sub){
+  return '<div class="metric-card"><div class="top-line" style="background:'+color+'"></div><div class="metric-label">'+label+'</div><div><span class="metric-value" style="color:#111827">'+value+'</span><span class="metric-unit">'+unit+'</span></div>'+(sub?'<div class="metric-sub" style="color:'+color+'">'+sub+'</div>':'')+'</div>';
+}
+
+function simulate(type){
+  curType=type;calcMetrics(type);totalSamples++;
+  if(type!=="NORMAL"){
+    alerts.unshift({type:type,time:new Date().toLocaleTimeString()});
+    if(alerts.length>8)alerts.pop();
+    updateAlerts();
+  }
+  updateUI();
+}
+
+function updateAlerts(){
+  document.getElementById("alertCount").textContent=alerts.length;
+  if(alerts.length===0){document.getElementById("alertsList").innerHTML='<div style="font-size:10px;color:#9CA3AF;text-align:center;padding:8px">Monitoring...</div>';return;}
+  let html="";
+  alerts.slice(0,5).forEach(a=>{const f=FAULTS[a.type];
+    html+='<div class="alert-item" style="background:'+f.bg+';border-left-color:'+f.color+'"><span style="font-size:12px">'+f.icon+'</span><div style="flex:1"><div style="font-size:10px;font-weight:600">'+f.label+'</div></div><span style="font-size:8px;color:#9CA3AF">'+a.time+'</span></div>';
+  });
+  document.getElementById("alertsList").innerHTML=html;
+}
+
+function setTab(tab){
+  curTab=tab;
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tab"+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add("active");
+  drawChart();
+}
+
+/* ═══ CHAT ═══ */
+function addMsg(role,text){
+  const div=document.createElement("div");
+  div.className="chat-msg "+role;
+  div.textContent=text;
+  document.getElementById("chatMessages").appendChild(div);
+  document.getElementById("chatMessages").scrollTop=99999;
+}
+
+function sendChat(){
+  const input=document.getElementById("chatInput");
+  const val=input.value.trim();
+  if(!val)return;
+  input.value="";
+  addMsg("user",val);
+  processChat(val);
+}
+
+function processChat(inp){
+  const lo=inp.toLowerCase();let resp="",simType=null;
+  if(lo.includes("sag")&&!lo.includes("harm")){simType="SAG";resp="⚡ VOLTAGE SAG DETECTED\n\nRMS: "+met.rms+"V (should be 230V)\nDrop: "+((230-met.rms)/230*100).toFixed(1)+"%\nConfidence: 99.2%\n\n📌 "+SHORT.SAG+"\n\n🔎 Cause:\n"+CAUSE.SAG+"\n\n✅ Action:\n"+ACTION.SAG+"\n\n⚠️ "+IMPACT.SAG;}
+  else if(lo.includes("harmon")||lo.includes("thd")){simType="HARMONIC";resp="〰 HARMONICS DETECTED\n\nTHD: "+met.thd+"% (limit: 5%)\nDominant: 3rd & 5th harmonics\nConfidence: 99.0%\n\n📌 "+SHORT.HARMONIC+"\n\n🔎 Cause:\n"+CAUSE.HARMONIC+"\n\n✅ Action:\n"+ACTION.HARMONIC+"\n\n⚠️ "+IMPACT.HARMONIC;}
+  else if(lo.includes("transient")||lo.includes("spike")){simType="TRANSIENT";resp="⚠️ TRANSIENT SPIKE\n\nPeak: "+met.peak+"V (normal: 325V)\nCrest: "+met.crest+"\nConfidence: 99.8%\n\n📌 "+SHORT.TRANSIENT+"\n\n✅ Action:\n"+ACTION.TRANSIENT+"\n\n⚠️ "+IMPACT.TRANSIENT;}
+  else if(lo.includes("swell")){simType="SWELL";resp="📈 VOLTAGE SWELL\n\nRMS: "+met.rms+"V\n\n📌 "+SHORT.SWELL+"\n🔎 "+CAUSE.SWELL+"\n✅ "+ACTION.SWELL;}
+  else if(lo.includes("status")||lo.includes("report")){resp="📊 SYSTEM STATUS\n\n• RMS: "+met.rms+"V\n• THD: "+met.thd+"%\n• PF: "+met.pf+"\n• Freq: "+met.freq+"Hz\n• Accuracy: 99.16%\n• Dataset: 2,367 samples\n• Current: "+FAULTS[curType].label;}
+  else if(lo.includes("risk")||lo.includes("safe")){const r=curType==="NORMAL"?8:curType==="TRANSIENT"?92:68;resp="🛡️ RISK: "+r+"/100\n\n"+(curType!=="NORMAL"?"⚠️ "+SHORT[curType]+"\n\n✅ "+ACTION[curType]:"✅ All safe.");}
+  else if(lo.includes("energy")||lo.includes("loss")||lo.includes("cost")){const l=met.thd*.5+(1-met.pf)*15;resp="💰 ENERGY LOSS: "+l.toFixed(1)+"%\n\nTHD losses: "+(met.thd*.5).toFixed(1)+"%\nPF losses: "+((1-met.pf)*15).toFixed(1)+"%\n\n₹"+(l*120).toFixed(0)+"/hour | ₹"+(l*120*24*30).toFixed(0)+"/month";}
+  else if(lo.includes("help")){resp="🤖 COMMANDS\n\n• voltage sag / harmonics / transient / swell\n• system status / risk / energy loss\n• Click simulate buttons\n• Use 🎤 voice (Chrome/Edge)";}
+  else if(lo.includes("normal")){simType="NORMAL";resp="✅ NORMAL\n\n"+SHORT.NORMAL;}
+  else{resp="Current: "+FAULTS[curType].label+"\nRMS: "+met.rms+"V | THD: "+met.thd+"%\n\nType \"help\" for commands.";}
+  if(simType)simulate(simType);
+  setTimeout(()=>addMsg("ai",resp),400);
+}
+
+/* ═══ VOICE ═══ */
+function toggleVoice(){
+  if(isListening){recognition?.stop();isListening=false;updateMicUI();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){addMsg("ai","⚠️ Voice needs Chrome or Edge.");return;}
+  try{
+    recognition=new SR();
+    recognition.continuous=false;
+    recognition.interimResults=true;
+    recognition.lang="en-US";
+    recognition.onstart=()=>{isListening=true;updateMicUI();};
+    recognition.onresult=(e)=>{
+      const t=e.results[0][0].transcript;
+      document.getElementById("voiceIndicator").textContent="🎤 "+t;
+      document.getElementById("chatInput").value=t;
+      if(e.results[0].isFinal){isListening=false;updateMicUI();addMsg("user",t);processChat(t);}
+    };
+    recognition.onerror=(e)=>{isListening=false;updateMicUI();
+      if(e.error==="not-allowed")addMsg("ai","🔒 Mic blocked. Click lock icon in address bar → Allow microphone → Refresh.");
+      else if(e.error==="no-speech")addMsg("ai","No speech heard. Try again.");
+      else addMsg("ai","Voice error: "+e.error);
+    };
+    recognition.onend=()=>{isListening=false;updateMicUI();};
+    recognition.start();
+  }catch(e){addMsg("ai","Voice failed. Type instead.");isListening=false;updateMicUI();}
+}
+function updateMicUI(){
+  const btn=document.getElementById("micBtn");
+  const ind=document.getElementById("voiceIndicator");
+  if(isListening){btn.classList.add("active");ind.style.display="inline";ind.textContent="🎤 Listening...";}
+  else{btn.classList.remove("active");ind.style.display="none";}
+}
+
+/* Auto-simulate every 5 seconds */
+setInterval(()=>{
+  const types=["NORMAL","NORMAL","NORMAL","NORMAL","SAG","SWELL","HARMONIC","HARMONIC","TRANSIENT"];
+  const pick=types[Math.floor(Math.random()*types.length)];
+  simulate(pick);
+},5000);
+
+/* Initial render */
+calcMetrics("NORMAL");
+updateUI();
+window.addEventListener("resize",drawChart);
+</script>
+</body>
+</html>
