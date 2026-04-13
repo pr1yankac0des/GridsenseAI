@@ -89,6 +89,25 @@ python backend/server.py
 # → Auto-docs at http://localhost:8000/docs
 ```
 
+### Option 3: Cloud Deploy (Docker)
+```bash
+# Build image
+docker build -t gridsense-ai .
+
+# Run container
+docker run -p 8000:8000 gridsense-ai
+
+# Open
+# http://localhost:8000/docs
+```
+
+### Option 4: Render (Blueprint)
+1. Push this repository to GitHub.
+2. In Render, choose New + and then Blueprint.
+3. Select this repository.
+4. Render will detect `render.yaml` and deploy automatically.
+5. Verify with `/health` and `/docs` on the deployed URL.
+
 ---
 
 ## 📊 Performance

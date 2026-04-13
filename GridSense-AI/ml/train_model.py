@@ -58,6 +58,22 @@ FEATURE_COLUMNS = [
 
 TARGET_COLUMN = "Fault_Type"
 
+FAULT_LABEL_ALIASES = {
+    "normal": 0,
+    "sag": 1,
+    "voltage sag": 1,
+    "voltage_sag": 1,
+    "voltagesag": 1,
+    "swell": 2,
+    "voltage swell": 2,
+    "voltage_swell": 2,
+    "voltageswell": 2,
+    "harmonics": 3,
+    "harmonic": 3,
+    "transients": 4,
+    "transient": 4,
+}
+
 
 def load_data():
     """
@@ -74,11 +90,15 @@ def load_data():
     
     dfs = []
     
-    # Load our synthetic data
-    synthetic_path = os.path.join(DATA_DIR, "power_quality_data.csv")
-    if os.path.exists(synthetic_path):
+    # Load our synthetic data (support both legacy and current filename)
+    synthetic_candidates = [
+        os.path.join(DATA_DIR, "power_quality_data.csv"),
+        os.path.join(DATA_DIR, "power_quality_fault_dataset.csv"),
+    ]
+    synthetic_path = next((p for p in synthetic_candidates if os.path.exists(p)), None)
+    if synthetic_path:
         df = pd.read_csv(synthetic_path)
-        print(f"  ✅ Synthetic data: {len(df)} samples")
+        print(f"  ✅ Synthetic data ({os.path.basename(synthetic_path)}): {len(df)} samples")
         dfs.append(df)
     else:
         print(f"  ❌ Synthetic data not found! Run generate_dataset.py first.")
@@ -205,6 +225,28 @@ def preprocess(df):
             print(f"  ⚠️ Missing column {col}, filling with defaults")
             df[col] = 0
     
+    # Normalize target labels to numeric class IDs expected by the API.
+    if TARGET_COLUMN not in df.columns:
+        print(f"  ❌ Missing required target column: {TARGET_COLUMN}")
+        sys.exit(1)
+
+    if not np.issubdtype(df[TARGET_COLUMN].dtype, np.number):
+        normalized = (
+            df[TARGET_COLUMN]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .str.replace("-", " ", regex=False)
+            .str.replace("_", " ", regex=False)
+            .str.replace(r"\s+", " ", regex=True)
+        )
+        mapped = normalized.map(FAULT_LABEL_ALIASES)
+        unknown = sorted(set(normalized[mapped.isna()].unique()))
+        if unknown:
+            print(f"  ❌ Unsupported fault labels found: {unknown}")
+            sys.exit(1)
+        df[TARGET_COLUMN] = mapped.astype(int)
+
     # Extract features and target
     X = df[FEATURE_COLUMNS].values
     y = df[TARGET_COLUMN].values

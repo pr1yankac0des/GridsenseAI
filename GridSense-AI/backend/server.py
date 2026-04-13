@@ -24,13 +24,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # ─── LOAD MODEL ─────────────────────────────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "gridsense_model.pkl")
+MODEL_CANDIDATES = [
+    os.path.join(os.path.dirname(__file__), "gridsense_model.pkl"),
+    os.path.join(os.path.dirname(__file__), "..", "ml", "gridsense_model.pkl"),
+]
 
 model_data = None
-if os.path.exists(MODEL_PATH):
-    with open(MODEL_PATH, "rb") as f:
+loaded_model_path = next((p for p in MODEL_CANDIDATES if os.path.exists(p)), None)
+if loaded_model_path:
+    with open(loaded_model_path, "rb") as f:
         model_data = pickle.load(f)
-    print(f"✅ Model loaded (accuracy: {model_data['accuracy']*100:.1f}%)")
+    print(
+        f"✅ Model loaded from {os.path.abspath(loaded_model_path)} "
+        f"(accuracy: {model_data['accuracy']*100:.1f}%)"
+    )
 else:
     print("⚠️ No model found. Run train_model.py first!")
 

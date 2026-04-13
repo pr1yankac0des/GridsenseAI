@@ -202,6 +202,45 @@ Type or say:
 /*  GRIDSENSE AI — PURE JAVASCRIPT (NO LIBRARIES) */
 /* ═══════════════════════════════════════════════ */
 
+/* API Configuration with auto-detection */
+let API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:8000'
+  : window.location.origin.replace(/:\d+$/, ':8000');
+let API_AVAILABLE = false;
+
+/* Check if API is available on startup */
+fetch(API_URL + '/health', { method: 'GET', mode: 'cors' })
+  .then(r => r.json())
+  .then(d => { API_AVAILABLE = d.status === 'online'; console.log('✅ API available at', API_URL); })
+  .catch(e => { API_AVAILABLE = false; console.log('ℹ️ API unreachable, using local simulation'); });
+
+/* Call backend /simulate endpoint and parse response into local metric format */
+async function callBackendSimulate() {
+  if (!API_AVAILABLE) return null;
+  try {
+    const r = await fetch(API_URL + '/simulate', { method: 'POST', mode: 'cors' });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!data.result) return null;
+    const res = data.result;
+    /* Map backend response to local fault type */
+    const faultMap = { 'Normal': 'NORMAL', 'Voltage Sag': 'SAG', 'Voltage Swell': 'SWELL', 'Harmonics': 'HARMONIC', 'Transients': 'TRANSIENT' };
+    const faultType = faultMap[res.fault] || 'NORMAL';
+    /* Extract metrics from backend response */
+    met = {
+      rms: parseFloat(res.metrics.rms_voltage) || 230,
+      peak: parseFloat(res.metrics.peak_voltage) || 325,
+      thd: parseFloat(res.metrics.thd) || 2,
+      pf: 0.97,
+      freq: 50.0,
+      crest: parseFloat(res.metrics.crest_factor) || 1.414
+    };
+    return faultType;
+  } catch (e) {
+    return null;
+  }
+}
+
 const FAULTS={NORMAL:{label:"Normal",icon:"✅",color:"#059669",bg:"#D1FAE5",sev:"OK"},SAG:{label:"Voltage Sag",icon:"⚡",color:"#E60012",bg:"#FDE8EA",sev:"HIGH"},SWELL:{label:"Voltage Swell",icon:"📈",color:"#D97706",bg:"#FEF3C7",sev:"MEDIUM"},HARMONIC:{label:"Harmonics",icon:"〰",color:"#7C3AED",bg:"#EDE9FE",sev:"HIGH"},TRANSIENT:{label:"Transients",icon:"⚠️",color:"#E60012",bg:"#FDE8EA",sev:"CRITICAL"}};
 const SHORT={NORMAL:"Clean waveform — all parameters within IEEE-1159 limits.",SAG:"RMS voltage dropped below 90% of nominal 230V. Equipment at risk.",SWELL:"RMS voltage exceeded 110% of nominal 230V. Overheat risk.",HARMONIC:"Waveform distorted by 3rd/5th/7th harmonics. THD exceeds 5% limit.",TRANSIENT:"Extremely fast high-energy voltage spike. Electronics at immediate risk."};
 const CAUSE={NORMAL:"Balanced 3-phase load. No abnormal conditions.",SAG:"Large motor startup, short circuit on adjacent feeder, sudden load surge, transformer energization.",SWELL:"Large load suddenly disconnected, capacitor bank switching ON, single line-to-ground fault.",HARMONIC:"Non-linear loads: VFDs, rectifiers, UPS systems, LED drivers, arc furnaces.",TRANSIENT:"Lightning, switching surge, electrostatic discharge, capacitor bank energization."};
@@ -363,10 +402,21 @@ function mc(label,value,unit,color,sub){
   return '<div class="metric-card"><div class="top-line" style="background:'+color+'"></div><div class="metric-label">'+label+'</div><div><span class="metric-value" style="color:#111827">'+value+'</span><span class="metric-unit">'+unit+'</span></div>'+(sub?'<div class="metric-sub" style="color:'+color+'">'+sub+'</div>':'')+'</div>';
 }
 
-function simulate(type){
-  curType=type;calcMetrics(type);totalSamples++;
-  if(type!=="NORMAL"){
-    alerts.unshift({type:type,time:new Date().toLocaleTimeString()});
+async function simulate(type){
+  /* Try backend API first if available, fall back to local simulation */
+  let result = null;
+  if (API_AVAILABLE && type === 'AUTO') {
+    result = await callBackendSimulate();
+  }
+  if (result) {
+    curType = result;
+  } else {
+    curType = type === 'AUTO' ? 'NORMAL' : type;
+    calcMetrics(curType);
+  }
+  totalSamples++;
+  if(curType!=="NORMAL"){
+    alerts.unshift({type:curType,time:new Date().toLocaleTimeString()});
     if(alerts.length>8)alerts.pop();
     updateAlerts();
   }
@@ -458,10 +508,16 @@ function updateMicUI(){
 }
 
 /* Auto-simulate every 5 seconds */
-setInterval(()=>{
-  const types=["NORMAL","NORMAL","NORMAL","NORMAL","SAG","SWELL","HARMONIC","HARMONIC","TRANSIENT"];
-  const pick=types[Math.floor(Math.random()*types.length)];
-  simulate(pick);
+setInterval(async ()=>{
+  if (API_AVAILABLE) {
+    /* Use backend API for real inference */
+    await simulate('AUTO');
+  } else {
+    /* Local simulation fallback */
+    const types=["NORMAL","NORMAL","NORMAL","NORMAL","SAG","SWELL","HARMONIC","HARMONIC","TRANSIENT"];
+    const pick=types[Math.floor(Math.random()*types.length)];
+    simulate(pick);
+  }
 },5000);
 
 /* Initial render */
