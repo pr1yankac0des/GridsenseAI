@@ -101,12 +101,17 @@ docker run -p 8000:8000 gridsense-ai
 # http://localhost:8000/docs
 ```
 
-### Option 4: Render (Blueprint)
-1. Push this repository to GitHub.
-2. In Render, choose New + and then Blueprint.
-3. Select this repository.
-4. Render will detect `render.yaml` and deploy automatically.
-5. Verify with `/health` and `/docs` on the deployed URL.
+### Option 4: Render (One-Click Deploy)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://dashboard.render.com/select-repo?repo-url=https://github.com/pr1yankac0des/GridsenseAI)
+
+Or manually:
+1. Go to [Render Dashboard](https://dashboard.render.com)
+2. Click **New +** → **Blueprint**
+3. Paste repo: `https://github.com/pr1yankac0des/GridsenseAI`
+4. Click **Connect** and **Deploy**
+5. Wait 2-3 minutes for model training
+6. Verify: `https://gridsense-ai-api.onrender.com/health`
 
 ---
 
